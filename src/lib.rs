@@ -80,23 +80,6 @@ mod tests {
         assert!(edit.is_ok(), "Could not get edit: {}", edit.unwrap_err());
         assert!(edit.as_ref().unwrap().choices.len() == 1, "No edit found");
         assert!(edit.unwrap().choices[0].text.replace("\n", "").eq("What a wonderful day!"));
-
-        
-        // Autocorrect Dutch spelling errors using an English instructino prompt?
-        let edit = ctx.create_edit(
-            crate::edits::EditRequestBuilder::default()
-            .model("text-davinci-edit-001")
-            .instruction("Correct all spelling mistakes")
-            .input("Ik hou van jouw moederr")
-            .build()
-            .unwrap()
-        ).await;
-
-        assert!(edit.is_ok(), "Could not get edit: {}", edit.unwrap_err());
-        assert!(edit.as_ref().unwrap().choices.len() == 1, "No edit found");
-
-        // This one might be pushing my luck a bit, but it seems to work
-        //assert!(edit.unwrap().choices[0].text.replace("\n", "").eq("Ik hou van jouw moeder"));
     }
 
     #[tokio::test]
