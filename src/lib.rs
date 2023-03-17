@@ -2,6 +2,7 @@ pub mod context;
 pub mod model;
 pub mod completion;
 pub mod chat;
+pub mod edits;
 
 #[cfg(test)]
 mod tests {
@@ -56,5 +57,43 @@ mod tests {
 
         assert!(completion.is_ok(), "Could not get completion: {}", completion.unwrap_err());
         assert!(completion.unwrap().choices.len() == 1, "No completion found");
+    }
+
+    #[tokio::test]
+    async fn test_edits() {
+        let ctx = get_api();
+        assert!(ctx.is_ok(), "Could not load context");
+        let ctx = ctx.unwrap();
+
+        // Autocorrect English spelling errors
+        let edit = ctx.create_edit(
+            crate::edits::EditRequestBuilder::default()
+            .model("text-davinci-edit-001")
+            .instruction("Correct all spelling mistakes")
+            .input("What a wnoderful day!")
+            .build()
+            .unwrap()
+        ).await;
+
+        assert!(edit.is_ok(), "Could not get edit: {}", edit.unwrap_err());
+        assert!(edit.as_ref().unwrap().choices.len() == 1, "No edit found");
+        assert!(edit.unwrap().choices[0].text.replace("\n", "").eq("What a wonderful day!"));
+
+        
+        // Autocorrect Dutch spelling errors using an English instructino prompt?
+        let edit = ctx.create_edit(
+            crate::edits::EditRequestBuilder::default()
+            .model("text-davinci-edit-001")
+            .instruction("Correct all spelling mistakes")
+            .input("Ik hou van jouw moederr")
+            .build()
+            .unwrap()
+        ).await;
+
+        assert!(edit.is_ok(), "Could not get edit: {}", edit.unwrap_err());
+        assert!(edit.as_ref().unwrap().choices.len() == 1, "No edit found");
+        
+        // This one might be pushing my luck a bit, but it seems to work
+        //assert!(edit.unwrap().choices[0].text.replace("\n", "").eq("Ik hou van jouw moeder"));
     }
 }
