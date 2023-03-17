@@ -53,4 +53,8 @@ impl Context {
     pub async fn create_edit(&self, edit_request: EditRequest) -> anyhow::Result<crate::edits::EditResponse> {
         Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/edits")).json(&edit_request)).send().await?.json::<EditResponse>().await?)
     }
+
+    pub async fn create_image(&self, image_request: crate::image::ImageRequest) -> anyhow::Result<crate::image::ImageResponse> {
+        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/images/generations")).json(&image_request)).send().await?.json::<crate::image::ImageResponse>().await?)
+    }
 }

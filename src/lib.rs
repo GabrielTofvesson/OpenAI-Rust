@@ -3,12 +3,14 @@ pub mod model;
 pub mod completion;
 pub mod chat;
 pub mod edits;
+pub mod image;
 
 #[cfg(test)]
 mod tests {
     use crate::chat::ChatMessage;
     use crate::context::Context;
     use crate::completion::CompletionRequestBuilder;
+    use crate::image::Image;
 
     fn get_api() -> anyhow::Result<Context> {
         Ok(Context::new(std::fs::read_to_string(std::path::Path::new("apikey.txt"))?.trim().to_string()))
@@ -92,8 +94,29 @@ mod tests {
 
         assert!(edit.is_ok(), "Could not get edit: {}", edit.unwrap_err());
         assert!(edit.as_ref().unwrap().choices.len() == 1, "No edit found");
-        
+
         // This one might be pushing my luck a bit, but it seems to work
         //assert!(edit.unwrap().choices[0].text.replace("\n", "").eq("Ik hou van jouw moeder"));
+    }
+
+    #[tokio::test]
+    async fn test_image() {
+        let ctx = get_api();
+        assert!(ctx.is_ok(), "Could not load context");
+        let ctx = ctx.unwrap();
+
+        let image = ctx.create_image(
+            crate::image::ImageRequestBuilder::default()
+            .prompt("In a realistic style, a ginger cat gracefully walking along a thin brick wall")
+            .build()
+            .unwrap()
+        ).await;
+
+        assert!(image.is_ok(), "Could not get image: {}", image.unwrap_err());
+        assert!(image.as_ref().unwrap().data.len() == 1, "No image found");
+        assert!(image.as_ref().unwrap().data[0].isURL(), "No image found");
+        if let Image::URL(url) = &image.as_ref().unwrap().data[0] {
+            println!("{}", url);
+        }
     }
 }
