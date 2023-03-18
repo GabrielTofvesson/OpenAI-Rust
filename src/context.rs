@@ -7,7 +7,7 @@ pub struct Context {
     org_id: Option<String>
 }
 
-const API_URL: &str = "https://api.openai.com";
+pub(crate) const API_URL: &str = "https://api.openai.com";
 
 impl Context {
     pub fn new(api_key: String) -> Self {
@@ -24,7 +24,7 @@ impl Context {
         }
     }
 
-    fn with_auth(&self, builder: RequestBuilder) -> RequestBuilder {
+    pub(crate) fn with_auth(&self, builder: RequestBuilder) -> RequestBuilder {
         (
             if let Some(ref org_id) = self.org_id {
                 builder.header("OpenAI-Organization", org_id)

@@ -4,13 +4,18 @@ pub mod completion;
 pub mod chat;
 pub mod edits;
 pub mod image;
+pub mod image_edit;
 
 #[cfg(test)]
 mod tests {
-    use crate::chat::ChatMessage;
+    use tokio::fs::File;
+
+    use crate::chat::{ChatHistoryBuilder, ChatMessage, Role};
     use crate::context::Context;
     use crate::completion::CompletionRequestBuilder;
-    use crate::image::{Image, ResponseFormat};
+    use crate::image::{Image, ResponseFormat, ImageRequestBuilder};
+    use crate::edits::EditRequestBuilder;
+    use crate::image_edit::{ImageEditRequestBuilder, ImageFile};
 
     fn get_api() -> anyhow::Result<Context> {
         Ok(Context::new(std::fs::read_to_string(std::path::Path::new("apikey.txt"))?.trim().to_string()))
@@ -34,10 +39,10 @@ mod tests {
 
         let completion = ctx.unwrap().create_completion(
             CompletionRequestBuilder::default()
-            .model("text-davinci-003")
-            .prompt("Say 'this is a test'")
-            .build()
-            .unwrap()
+                .model("text-davinci-003")
+                .prompt("Say 'this is a test'")
+                .build()
+                .unwrap()
         ).await;
         
         assert!(completion.is_ok(), "Could not get completion: {}", completion.unwrap_err());
@@ -50,11 +55,11 @@ mod tests {
         assert!(ctx.is_ok(), "Could not load context");
 
         let completion = ctx.unwrap().create_chat_completion(
-            crate::chat::ChatHistoryBuilder::default()
-            .messages(vec![ChatMessage::new(crate::chat::Role::User, "Respond to this message with 'this is a test'")])
-            .model("gpt-3.5-turbo")
-            .build()
-            .unwrap()
+            ChatHistoryBuilder::default()
+                .messages(vec![ChatMessage::new(Role::User, "Respond to this message with 'this is a test'")])
+                .model("gpt-3.5-turbo")
+                .build()
+                .unwrap()
         ).await;
 
         assert!(completion.is_ok(), "Could not get completion: {}", completion.unwrap_err());
@@ -69,12 +74,12 @@ mod tests {
 
         // Autocorrect English spelling errors
         let edit = ctx.create_edit(
-            crate::edits::EditRequestBuilder::default()
-            .model("text-davinci-edit-001")
-            .instruction("Correct all spelling mistakes")
-            .input("What a wnoderful day!")
-            .build()
-            .unwrap()
+            EditRequestBuilder::default()
+                .model("text-davinci-edit-001")
+                .instruction("Correct all spelling mistakes")
+                .input("What a wnoderful day!")
+                .build()
+                .unwrap()
         ).await;
 
         assert!(edit.is_ok(), "Could not get edit: {}", edit.unwrap_err());
@@ -84,17 +89,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_image() {
-        const IMAGE_PROMPT: &str = "In a realistic style, a ginger cat gracefully walking along a thin brick wall";
+        const IMAGE_PROMPT: &str = "A real ginger cat gracefully walking along a real, thin brick wall";
         let ctx = get_api();
         assert!(ctx.is_ok(), "Could not load context");
         let ctx = ctx.unwrap();
 
         let image = ctx.create_image(
-            crate::image::ImageRequestBuilder::default()
-            .prompt(IMAGE_PROMPT)
-            .response_format(ResponseFormat::URL)
-            .build()
-            .unwrap()
+            ImageRequestBuilder::default()
+                .prompt(IMAGE_PROMPT)
+                .response_format(ResponseFormat::URL)
+                .build()
+                .unwrap()
         ).await;
 
         assert!(image.is_ok(), "Could not get image: {}", image.unwrap_err());
@@ -107,6 +112,35 @@ mod tests {
             }
             Image::Base64(ref b64) => {
                 println!("Generated test image Base64: {b64}");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_image_edit() {
+        const IMAGE_PROMPT: &str = "A real ginger cat gracefully walking along a real, thin brick wall";
+        let ctx = get_api();
+        assert!(ctx.is_ok(), "Could not load context");
+        let ctx = ctx.unwrap();
+
+        let image = ctx.create_image_edit(
+            ImageEditRequestBuilder::default()
+                .image(ImageFile::File(File::open("clown.png").await.unwrap()))
+                .prompt("Blue nose")
+                .build()
+                .unwrap()
+        ).await;
+
+        assert!(image.is_ok(), "Could not get image: {}", image.unwrap_err());
+        assert!(image.as_ref().unwrap().data.len() == 1, "No image found");
+        assert!(matches!(image.as_ref().unwrap().data[0], Image::URL(_)), "No image found");
+        println!("Image prompt: {IMAGE_PROMPT}");
+        match image.unwrap().data[0] {
+            Image::URL(ref url) => {
+                println!("Generated edited image URL: {url}");
+            }
+            Image::Base64(ref b64) => {
+                println!("Generated edited image Base64: {b64}");
             }
         }
     }

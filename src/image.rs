@@ -7,14 +7,20 @@ pub enum ResponseFormat {
     Base64,
 }
 
+impl ToString for ResponseFormat {
+    fn to_string(&self) -> String {
+        match self {
+            Self::URL => "url".to_string(),
+            Self::Base64 => "b64_json".to_string(),
+        }
+    }
+}
+
 impl Serialize for ResponseFormat {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer {
-        match self {
-            Self::URL => serializer.serialize_str("url"),
-            Self::Base64 => serializer.serialize_str("b64_json"),
-        }
+        serializer.serialize_str(&self.to_string())
     }
 }
 
@@ -53,6 +59,9 @@ pub struct ImageRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(setter(into, strip_option), default)]
     pub user: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(setter(into, strip_option), default)]
+    pub temperature: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
