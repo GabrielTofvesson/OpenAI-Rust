@@ -1,5 +1,8 @@
 use derive_builder::Builder;
+use reqwest::Client;
 use serde::{Serialize, Deserialize};
+
+use crate::context::{API_URL, Context};
 
 #[derive(Debug, Clone)]
 pub enum ResponseFormat {
@@ -93,4 +96,10 @@ impl<'de> Deserialize<'de> for Image {
 pub struct ImageResponse {
     pub created: u64,
     pub data: Vec<Image>,
+}
+
+impl Context {
+    pub async fn create_image(&self, image_request: crate::image::ImageRequest) -> anyhow::Result<crate::image::ImageResponse> {
+        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/images/generations")).json(&image_request)).send().await?.json::<crate::image::ImageResponse>().await?)
+    }
 }

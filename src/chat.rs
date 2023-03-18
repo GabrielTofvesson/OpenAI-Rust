@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use derive_builder::Builder;
+use reqwest::Client;
 use serde::{Serialize, Deserialize};
 
-use crate::completion::{Sequence, Usage};
+use crate::{completion::{Sequence, Usage}, context::{API_URL, Context}};
 
 #[derive(Debug, Clone)]
 pub enum Role {
@@ -107,4 +108,10 @@ pub struct ChatCompletionResponse {
     pub model: String,
     pub choices: Vec<ChatCompletion>,
     pub usage: Usage
+}
+
+impl Context {
+    pub async fn create_chat_completion(&self, chat_completion_request: ChatHistory) -> anyhow::Result<ChatCompletionResponse> {
+        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/chat/completions"))).json(&chat_completion_request).send().await?.json::<ChatCompletionResponse>().await?)
+    }
 }

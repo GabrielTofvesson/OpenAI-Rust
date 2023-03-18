@@ -1,7 +1,8 @@
 use derive_builder::Builder;
+use reqwest::Client;
 use serde::{Serialize, Deserialize};
 
-use crate::completion::Usage;
+use crate::{completion::Usage, context::{API_URL, Context}};
 
 #[derive(Debug, Serialize, Builder)]
 pub struct EditRequest {
@@ -35,4 +36,10 @@ pub struct EditResponse {
     pub created: u64,
     pub choices: Vec<Edit>,
     pub usage: Usage
+}
+
+impl Context {
+    pub async fn create_edit(&self, edit_request: EditRequest) -> anyhow::Result<crate::edits::EditResponse> {
+        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/edits")).json(&edit_request)).send().await?.json::<EditResponse>().await?)
+    }
 }

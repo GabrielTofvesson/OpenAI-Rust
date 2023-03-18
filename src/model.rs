@@ -1,4 +1,7 @@
+use reqwest::Client;
 use serde::Deserialize;
+
+use crate::context::{API_URL, Context};
 
 #[derive(Debug, Deserialize)]
 pub struct Permission {
@@ -29,4 +32,14 @@ pub struct Model {
 #[derive(Debug, Deserialize)]
 pub(crate) struct ModelList {
     pub data: Vec<Model>,
+}
+
+impl Context {
+    pub async fn get_models(&self) -> anyhow::Result<Vec<Model>> {
+        Ok(self.with_auth(Client::builder().build()?.get(&format!("{API_URL}/v1/models"))).send().await?.json::<ModelList>().await?.data)
+    }
+
+    pub async fn get_model(&self, model_id: &str) -> anyhow::Result<Model> {
+        Ok(self.with_auth(Client::builder().build()?.get(&format!("{API_URL}/v1/models/{model_id}", model_id = model_id))).send().await?.json::<Model>().await?)
+    }
 }

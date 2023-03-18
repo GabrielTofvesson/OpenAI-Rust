@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use derive_builder::Builder;
+use reqwest::Client;
 use serde::{Serialize, Deserialize};
+
+use crate::context::{API_URL, Context};
 
 #[derive(Debug, Clone)]
 pub enum Sequence {
@@ -121,4 +124,10 @@ pub struct CompletionResponse {
     pub model: String,
     pub choices: Vec<Choice>,
     pub usage: Usage,
+}
+
+impl Context {
+    pub async fn create_completion(&self, completion_request: CompletionRequest) -> anyhow::Result<CompletionResponse> {
+        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/completions")).json(&completion_request)).send().await?.json::<CompletionResponse>().await?)
+    }
 }
