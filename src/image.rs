@@ -34,15 +34,21 @@ pub enum ImageSize {
     Size1024,
 }
 
+impl ToString for ImageSize {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Size256 => "256x256".to_string(),
+            Self::Size512 => "512x512".to_string(),
+            Self::Size1024 => "1024x1024".to_string(),
+        }
+    }
+}
+
 impl Serialize for ImageSize {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer {
-        match self {
-            Self::Size256 => serializer.serialize_str("256x256"),
-            Self::Size512 => serializer.serialize_str("512x512"),
-            Self::Size1024 => serializer.serialize_str("1024x1024"),
-        }
+        serializer.serialize_str(&self.to_string())
     }
 }
 

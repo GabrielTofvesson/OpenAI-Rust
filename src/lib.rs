@@ -5,6 +5,7 @@ pub mod chat;
 pub mod edits;
 pub mod image;
 pub mod image_edit;
+pub mod image_variation;
 
 #[cfg(test)]
 mod tests {
@@ -16,6 +17,7 @@ mod tests {
     use crate::image::{Image, ResponseFormat, ImageRequestBuilder};
     use crate::edits::EditRequestBuilder;
     use crate::image_edit::{ImageEditRequestBuilder, ImageFile};
+    use crate::image_variation::ImageVariationRequestBuilder;
 
     fn get_api() -> anyhow::Result<Context> {
         Ok(Context::new(std::fs::read_to_string(std::path::Path::new("apikey.txt"))?.trim().to_string()))
@@ -141,6 +143,32 @@ mod tests {
             }
             Image::Base64(ref b64) => {
                 println!("Generated edited image Base64: {b64}");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_image_variation() {
+        let ctx = get_api();
+        assert!(ctx.is_ok(), "Could not load context");
+        let ctx = ctx.unwrap();
+
+        let image = ctx.create_image_variation(
+            ImageVariationRequestBuilder::default()
+                .image(ImageFile::File(File::open("clown_original.png").await.unwrap()))
+                .build()
+                .unwrap()
+        ).await;
+
+        assert!(image.is_ok(), "Could not get image: {}", image.unwrap_err());
+        assert!(image.as_ref().unwrap().data.len() == 1, "No image found");
+        assert!(matches!(image.as_ref().unwrap().data[0], Image::URL(_)), "No image found");
+        match image.unwrap().data[0] {
+            Image::URL(ref url) => {
+                println!("Generated image variation URL: {url}");
+            }
+            Image::Base64(ref b64) => {
+                println!("Generated image variation Base64: {b64}");
             }
         }
     }

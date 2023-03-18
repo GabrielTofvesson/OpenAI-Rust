@@ -1,7 +1,7 @@
 use base64::{Engine, prelude::BASE64_STANDARD};
 use derive_builder::Builder;
 use reqwest::{Body, multipart::{Part, Form}, Client};
-use crate::{image::{ResponseFormat, ImageResponse}, context::{API_URL, Context}};
+use crate::{image::{ResponseFormat, ImageResponse, ImageSize}, context::{API_URL, Context}};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 #[derive(Debug)]
@@ -27,9 +27,11 @@ pub struct ImageEditRequest {
     pub user: Option<String>,
     #[builder(setter(into, strip_option), default)]
     pub temperature: Option<f64>,
+    #[builder(setter(into, strip_option), default)]
+    pub size: Option<ImageSize>,
 }
 
-fn write_file(form: Form, file: ImageFile, name: impl Into<String>) -> Form {
+pub(crate) fn write_file(form: Form, file: ImageFile, name: impl Into<String>) -> Form {
     let name = name.into();
     match file {
         ImageFile::File(file) =>
@@ -61,6 +63,10 @@ impl Context {
 
         if let Some(temperature) = req.temperature {
             form = form.text("temperature", temperature.to_string());
+        }
+
+        if let Some(size) = req.size {
+            form = form.text("size", size.to_string());
         }
         
         Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/images/edits")).multipart(form)).send().await?.json::<ImageResponse>().await?)
