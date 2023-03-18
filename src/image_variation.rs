@@ -38,6 +38,14 @@ impl Context {
             form = form.text("size", size.to_string());
         }
         
-        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/images/variations")).multipart(form)).send().await?.json::<ImageResponse>().await?)
+        Ok(
+            self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/images/variations")))
+                .multipart(form)
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<ImageResponse>()
+                .await?
+        )
     }
 }

@@ -39,7 +39,15 @@ pub struct EditResponse {
 }
 
 impl Context {
-    pub async fn create_edit(&self, edit_request: EditRequest) -> anyhow::Result<crate::edits::EditResponse> {
-        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/edits")).json(&edit_request)).send().await?.json::<EditResponse>().await?)
+    pub async fn create_edit(&self, edit_request: EditRequest) -> anyhow::Result<EditResponse> {
+        Ok(
+            self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/edits")))
+                .json(&edit_request)
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<EditResponse>()
+                .await?
+        )
     }
 }

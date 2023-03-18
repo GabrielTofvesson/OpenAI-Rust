@@ -45,7 +45,8 @@ pub struct ModerationResponse {
 impl Context {
     pub async fn create_moderation(&self, moderation_request: ModerationRequest) -> anyhow::Result<ModerationResponse> {
         Ok(
-            self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/moderations")).json(&moderation_request))
+            self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/moderations")))
+                .json(&moderation_request)
                 .send()
                 .await?
                 .error_for_status()?

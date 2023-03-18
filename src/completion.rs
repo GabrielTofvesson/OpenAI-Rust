@@ -134,6 +134,14 @@ pub struct CompletionResponse {
 
 impl Context {
     pub async fn create_completion(&self, completion_request: CompletionRequest) -> anyhow::Result<CompletionResponse> {
-        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/completions")).json(&completion_request)).send().await?.json::<CompletionResponse>().await?)
+        Ok(
+            self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/completions")))
+                .json(&completion_request)
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<CompletionResponse>()
+                .await?
+        )
     }
 }

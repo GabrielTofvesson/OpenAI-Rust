@@ -38,6 +38,14 @@ pub struct EmbeddingResponse {
 
 impl Context {
     pub async fn create_embedding(&self, embedding_request: EmbeddingRequest) -> anyhow::Result<EmbeddingResponse> {
-        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/embeddings")).json(&embedding_request)).send().await?.json::<EmbeddingResponse>().await?)
+        Ok(
+            self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/embeddings")))
+                .json(&embedding_request)
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<EmbeddingResponse>()
+                .await?
+        )
     }
 }

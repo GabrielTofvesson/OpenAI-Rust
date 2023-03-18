@@ -31,10 +31,25 @@ pub struct Model {
 
 impl Context {
     pub async fn get_models(&self) -> anyhow::Result<Vec<Model>> {
-        Ok(self.with_auth(Client::builder().build()?.get(&format!("{API_URL}/v1/models"))).send().await?.json::<DataList<Model>>().await?.data)
+        Ok(
+            self.with_auth(Client::builder().build()?.get(&format!("{API_URL}/v1/models")))
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<DataList<Model>>()
+                .await?
+                .data
+        )
     }
 
     pub async fn get_model(&self, model_id: &str) -> anyhow::Result<Model> {
-        Ok(self.with_auth(Client::builder().build()?.get(&format!("{API_URL}/v1/models/{model_id}", model_id = model_id))).send().await?.json::<Model>().await?)
+        Ok(
+            self.with_auth(Client::builder().build()?.get(&format!("{API_URL}/v1/models/{model_id}", model_id = model_id)))
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<Model>()
+                .await?
+            )
     }
 }

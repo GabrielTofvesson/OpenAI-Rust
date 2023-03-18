@@ -105,7 +105,15 @@ pub struct ImageResponse {
 }
 
 impl Context {
-    pub async fn create_image(&self, image_request: crate::image::ImageRequest) -> anyhow::Result<crate::image::ImageResponse> {
-        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/images/generations")).json(&image_request)).send().await?.json::<crate::image::ImageResponse>().await?)
+    pub async fn create_image(&self, image_request: ImageRequest) -> anyhow::Result<ImageResponse> {
+        Ok(
+            self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/images/generations")))
+                .json(&image_request)
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<ImageResponse>()
+                .await?
+        )
     }
 }
