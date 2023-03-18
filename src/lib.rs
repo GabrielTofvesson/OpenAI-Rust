@@ -10,7 +10,7 @@ mod tests {
     use crate::chat::ChatMessage;
     use crate::context::Context;
     use crate::completion::CompletionRequestBuilder;
-    use crate::image::Image;
+    use crate::image::{Image, ResponseFormat};
 
     fn get_api() -> anyhow::Result<Context> {
         Ok(Context::new(std::fs::read_to_string(std::path::Path::new("apikey.txt"))?.trim().to_string()))
@@ -84,22 +84,30 @@ mod tests {
 
     #[tokio::test]
     async fn test_image() {
+        const IMAGE_PROMPT: &str = "In a realistic style, a ginger cat gracefully walking along a thin brick wall";
         let ctx = get_api();
         assert!(ctx.is_ok(), "Could not load context");
         let ctx = ctx.unwrap();
 
         let image = ctx.create_image(
             crate::image::ImageRequestBuilder::default()
-            .prompt("In a realistic style, a ginger cat gracefully walking along a thin brick wall")
+            .prompt(IMAGE_PROMPT)
+            .response_format(ResponseFormat::URL)
             .build()
             .unwrap()
         ).await;
 
         assert!(image.is_ok(), "Could not get image: {}", image.unwrap_err());
         assert!(image.as_ref().unwrap().data.len() == 1, "No image found");
-        assert!(image.as_ref().unwrap().data[0].isURL(), "No image found");
-        if let Image::URL(url) = &image.as_ref().unwrap().data[0] {
-            println!("{}", url);
+        assert!(matches!(image.as_ref().unwrap().data[0], Image::URL(_)), "No image found");
+        println!("Image prompt: {IMAGE_PROMPT}");
+        match image.unwrap().data[0] {
+            Image::URL(ref url) => {
+                println!("Generated test image URL: {url}");
+            }
+            Image::Base64(ref b64) => {
+                println!("Generated test image Base64: {b64}");
+            }
         }
     }
 }

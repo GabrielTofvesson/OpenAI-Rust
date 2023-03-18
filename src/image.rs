@@ -67,22 +67,6 @@ pub enum Image {
     Base64(String),
 }
 
-impl Image {
-    pub fn isURL(&self) -> bool {
-        return match self {
-            Self::URL(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn isBase64(&self) -> bool {
-        return match self {
-            Self::Base64(_) => true,
-            _ => false
-        }
-    }
-}
-
 impl<'de> Deserialize<'de> for Image {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
