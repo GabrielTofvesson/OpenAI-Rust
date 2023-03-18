@@ -8,6 +8,7 @@ pub mod image_edit;
 pub mod image_variation;
 pub mod embedding;
 pub mod transcription;
+pub mod translation;
 
 #[cfg(test)]
 mod tests {
@@ -216,4 +217,6 @@ mod tests {
         assert!(transcription.is_ok(), "Could not get transcription: {}", transcription.unwrap_err());
         println!("Transcription: {:?}", transcription.unwrap().text);
     }
+
+    // TODO: Add translation test
 }

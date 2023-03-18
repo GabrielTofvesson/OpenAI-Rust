@@ -26,7 +26,7 @@ pub enum AudioFile {
 }
 
 impl AudioFile {
-    fn file_name(&self) -> &'static str {
+    pub(crate) fn file_name(&self) -> &'static str {
         match self {
             AudioFile::MP3(_) => "file.mp3",
             AudioFile::MP4(_) => "file.mp4",
@@ -37,7 +37,7 @@ impl AudioFile {
         }
     }
 
-    fn file(self) -> File {
+    pub(crate) fn file(self) -> File {
         match self {
             AudioFile::MP3(file) => file,
             AudioFile::MP4(file) => file,
