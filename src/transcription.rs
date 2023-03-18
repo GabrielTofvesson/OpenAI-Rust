@@ -1,10 +1,9 @@
 use derive_builder::Builder;
-use reqwest::{multipart::{Form, Part}, Body, Client};
+use reqwest::{multipart::Form, Client};
 use serde::Deserialize;
 use tokio::fs::File;
-use tokio_util::codec::{FramedRead, BytesCodec};
 
-use crate::context::{API_URL, Context};
+use crate::{context::{API_URL, Context}, util::FileResource};
 
 #[derive(Debug, Clone)]
 pub enum AudioResponseFormat {
@@ -87,7 +86,7 @@ impl Context {
     pub async fn create_transcription(&self, req: TranscriptionRequest) -> anyhow::Result<TranscriptionResponse> {
         let mut form = Form::new();
         let file_name = req.file.file_name();
-        form = form.part("file", Part::stream(Body::wrap_stream(FramedRead::new(req.file.file(), BytesCodec::new()))).file_name(file_name));
+        form = FileResource::from(req.file.file()).write_file_named(form, "file", file_name);
         form = form.text("model", req.model);
 
         if let Some(response_format) = req.response_format {

@@ -9,6 +9,9 @@ pub mod image_variation;
 pub mod embedding;
 pub mod transcription;
 pub mod translation;
+pub mod file;
+
+pub mod util;
 
 #[cfg(test)]
 mod tests {
@@ -19,7 +22,7 @@ mod tests {
     use crate::completion::CompletionRequestBuilder;
     use crate::image::{Image, ResponseFormat, ImageRequestBuilder};
     use crate::edits::EditRequestBuilder;
-    use crate::image_edit::{ImageEditRequestBuilder, ImageFile};
+    use crate::image_edit::ImageEditRequestBuilder;
     use crate::image_variation::ImageVariationRequestBuilder;
     use crate::embedding::EmbeddingRequestBuilder;
     use crate::transcription::{TranscriptionRequestBuilder, AudioFile};
@@ -132,7 +135,7 @@ mod tests {
 
         let image = ctx.create_image_edit(
             ImageEditRequestBuilder::default()
-                .image(ImageFile::File(File::open("clown.png").await.unwrap()))
+                .image(File::open("clown.png").await.unwrap())
                 .prompt("Blue nose")
                 .build()
                 .unwrap()
@@ -160,7 +163,7 @@ mod tests {
 
         let image = ctx.create_image_variation(
             ImageVariationRequestBuilder::default()
-                .image(ImageFile::File(File::open("clown_original.png").await.unwrap()))
+                .image(File::open("clown_original.png").await.unwrap())
                 .build()
                 .unwrap()
         ).await;

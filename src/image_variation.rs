@@ -1,13 +1,13 @@
 use derive_builder::Builder;
 use reqwest::{multipart::Form, Client};
 
-use crate::{image_edit::{ImageFile, write_file}, image::{ImageSize, ResponseFormat, ImageResponse}, context::{API_URL, Context}};
+use crate::{image::{ImageSize, ResponseFormat, ImageResponse}, context::{API_URL, Context}, util::FileResource};
 
 #[derive(Debug, Builder)]
 #[builder(pattern = "owned")]
 pub struct ImageVariationRequest {
     #[builder(setter(into))]
-    pub image: ImageFile,
+    pub image: FileResource,
     #[builder(setter(into, strip_option), default)]
     pub n: Option<u32>,
     #[builder(setter(into, strip_option), default)]
@@ -22,7 +22,7 @@ pub struct ImageVariationRequest {
 impl Context {
     pub async fn create_image_variation(&self, req: ImageVariationRequest) -> anyhow::Result<ImageResponse> {
         let mut form = Form::new();
-        form = write_file(form, req.image, "image");
+        form = req.image.write_file(form, "image");
 
         if let Some(n) = req.n {
             form = form.text("n", n.to_string());
