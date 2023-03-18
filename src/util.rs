@@ -3,20 +3,10 @@ use reqwest::{multipart::{Form, Part}, Body};
 use serde::Deserialize;
 use tokio_util::codec::{FramedRead, BytesCodec};
 
-pub struct DataList<T: for<'d> Deserialize<'d>> {
+#[derive(Debug, Deserialize)]
+pub struct DataList<T> {
     pub data: Vec<T>,
     /* pub object: "list", */
-}
-
-impl<'de, T: for<'d> Deserialize<'d>> Deserialize<'de> for DataList<T> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(Self {
-            data: Vec::<T>::deserialize(deserializer)?
-        })
-    }
 }
 
 
