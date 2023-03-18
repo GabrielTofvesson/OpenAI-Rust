@@ -11,6 +11,7 @@ pub mod transcription;
 pub mod translation;
 pub mod file;
 pub mod fine_tune;
+pub mod moderation;
 
 pub mod util;
 
@@ -28,6 +29,7 @@ mod tests {
     use crate::embedding::EmbeddingRequestBuilder;
     use crate::transcription::{TranscriptionRequestBuilder, AudioFile};
     use crate::translation::TranslationRequestBuilder;
+    use crate::moderation::ModerationRequestBuilder;
 
     fn get_api() -> anyhow::Result<Context> {
         Ok(Context::new(std::fs::read_to_string(std::path::Path::new("apikey.txt"))?.trim().to_string()))
@@ -238,5 +240,26 @@ mod tests {
 
         assert!(translation.is_ok(), "Could not get translation: {}", translation.unwrap_err());
         println!("Translation: {:?}", translation.unwrap().text);
+    }
+
+    #[tokio::test]
+    async fn test_moderation() {
+        let ctx = get_api();
+        assert!(ctx.is_ok(), "Could not load context");
+        let ctx = ctx.unwrap();
+
+        let moderation = ctx.create_moderation(
+            ModerationRequestBuilder::default()
+                .model("text-moderation-latest")
+                .input("I want to kill them")
+                .build()
+                .unwrap()
+        ).await;
+
+        assert!(moderation.is_ok(), "Could not get moderation: {}", moderation.unwrap_err());
+        let moderation = moderation.unwrap();
+        assert!(moderation.results.len() == 1, "No moderation results found");
+        assert!(moderation.results[0].flagged, "Violent language not flagged");
+        println!("Moderation: {:?}", moderation.results[0]);
     }
 }
