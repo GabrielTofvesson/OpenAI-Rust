@@ -26,6 +26,7 @@ mod tests {
     use crate::image_variation::ImageVariationRequestBuilder;
     use crate::embedding::EmbeddingRequestBuilder;
     use crate::transcription::{TranscriptionRequestBuilder, AudioFile};
+    use crate::translation::TranslationRequestBuilder;
 
     fn get_api() -> anyhow::Result<Context> {
         Ok(Context::new(std::fs::read_to_string(std::path::Path::new("apikey.txt"))?.trim().to_string()))
@@ -128,7 +129,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_image_edit() {
-        const IMAGE_PROMPT: &str = "A real ginger cat gracefully walking along a real, thin brick wall";
         let ctx = get_api();
         assert!(ctx.is_ok(), "Could not load context");
         let ctx = ctx.unwrap();
@@ -136,7 +136,7 @@ mod tests {
         let image = ctx.create_image_edit(
             ImageEditRequestBuilder::default()
                 .image(File::open("clown.png").await.unwrap())
-                .prompt("Blue nose")
+                .prompt("Clown with a round, blue nose")
                 .build()
                 .unwrap()
         ).await;
@@ -144,7 +144,6 @@ mod tests {
         assert!(image.is_ok(), "Could not get image: {}", image.unwrap_err());
         assert!(image.as_ref().unwrap().data.len() == 1, "No image found");
         assert!(matches!(image.as_ref().unwrap().data[0], Image::URL(_)), "No image found");
-        println!("Image prompt: {IMAGE_PROMPT}");
         match image.unwrap().data[0] {
             Image::URL(ref url) => {
                 println!("Generated edited image URL: {url}");
@@ -221,5 +220,22 @@ mod tests {
         println!("Transcription: {:?}", transcription.unwrap().text);
     }
 
-    // TODO: Add translation test
+    #[tokio::test]
+    async fn test_translation() {
+        let ctx = get_api();
+        assert!(ctx.is_ok(), "Could not load context");
+        let ctx = ctx.unwrap();
+
+        let translation = ctx.create_translation(
+            TranslationRequestBuilder::default()
+                .model("whisper-1")
+                .prompt("[English]") // Without this, Whisper just responds with the French transcript?
+                .file(AudioFile::MP3(File::open("french.mp3").await.unwrap()))
+                .build()
+                .unwrap()
+        ).await;
+
+        assert!(translation.is_ok(), "Could not get translation: {}", translation.unwrap_err());
+        println!("Translation: {:?}", translation.unwrap().text);
+    }
 }
