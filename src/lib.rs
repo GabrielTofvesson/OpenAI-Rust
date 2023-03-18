@@ -6,6 +6,7 @@ pub mod edits;
 pub mod image;
 pub mod image_edit;
 pub mod image_variation;
+pub mod embedding;
 
 #[cfg(test)]
 mod tests {
@@ -18,6 +19,7 @@ mod tests {
     use crate::edits::EditRequestBuilder;
     use crate::image_edit::{ImageEditRequestBuilder, ImageFile};
     use crate::image_variation::ImageVariationRequestBuilder;
+    use crate::embedding::EmbeddingRequestBuilder;
 
     fn get_api() -> anyhow::Result<Context> {
         Ok(Context::new(std::fs::read_to_string(std::path::Path::new("apikey.txt"))?.trim().to_string()))
@@ -171,5 +173,25 @@ mod tests {
                 println!("Generated image variation Base64: {b64}");
             }
         }
+    }
+
+    #[tokio::test]
+    async fn test_embedding() {
+        let ctx = get_api();
+        assert!(ctx.is_ok(), "Could not load context");
+        let ctx = ctx.unwrap();
+
+        let embeddings = ctx.create_embedding(
+            EmbeddingRequestBuilder::default()
+                .model("text-embedding-ada-002")
+                .input("word sentence paragraph lorem ipsum dolor sit amet")
+                .build()
+                .unwrap()
+        ).await;
+
+        assert!(embeddings.is_ok(), "Could not get embeddings: {}", embeddings.unwrap_err());
+        assert!(embeddings.as_ref().unwrap().data.len() == 1, "No embeddings found");
+        assert!(embeddings.as_ref().unwrap().data[0].embedding.len() > 0, "No embeddings found");
+        println!("Embeddings: {:?}", embeddings.unwrap().data[0].embedding);
     }
 }

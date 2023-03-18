@@ -36,6 +36,12 @@ impl From<Vec<String>> for Sequence {
     }
 }
 
+impl From<Vec<&str>> for Sequence {
+    fn from(v: Vec<&str>) -> Self {
+        Sequence::List(v.iter().map(|s| s.to_string()).collect())
+    }
+}
+
 impl From<&str> for Sequence {
     fn from(s: &str) -> Self {
         Sequence::String(s.to_string())
