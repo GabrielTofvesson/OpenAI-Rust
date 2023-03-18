@@ -7,6 +7,7 @@ pub mod image;
 pub mod image_edit;
 pub mod image_variation;
 pub mod embedding;
+pub mod transcription;
 
 #[cfg(test)]
 mod tests {
@@ -20,6 +21,7 @@ mod tests {
     use crate::image_edit::{ImageEditRequestBuilder, ImageFile};
     use crate::image_variation::ImageVariationRequestBuilder;
     use crate::embedding::EmbeddingRequestBuilder;
+    use crate::transcription::{TranscriptionRequestBuilder, AudioFile};
 
     fn get_api() -> anyhow::Result<Context> {
         Ok(Context::new(std::fs::read_to_string(std::path::Path::new("apikey.txt"))?.trim().to_string()))
@@ -193,5 +195,25 @@ mod tests {
         assert!(embeddings.as_ref().unwrap().data.len() == 1, "No embeddings found");
         assert!(embeddings.as_ref().unwrap().data[0].embedding.len() > 0, "No embeddings found");
         println!("Embeddings: {:?}", embeddings.unwrap().data[0].embedding);
+    }
+
+    #[tokio::test]
+    async fn test_transcription() {
+        let ctx = get_api();
+        assert!(ctx.is_ok(), "Could not load context");
+        let ctx = ctx.unwrap();
+
+        // Original script: "Hello. This is a sample piece of audio for which the whisper AI will generate a transcript"
+        // Expected result: "Hello, this is a sample piece of audio for which the Whisper AI will generate a transcript."
+        let transcription = ctx.create_transcription(
+            TranscriptionRequestBuilder::default()
+                .model("whisper-1")
+                .file(AudioFile::MP3(File::open("sample_audio.mp3").await.unwrap()))
+                .build()
+                .unwrap()
+        ).await;
+
+        assert!(transcription.is_ok(), "Could not get transcription: {}", transcription.unwrap_err());
+        println!("Transcription: {:?}", transcription.unwrap().text);
     }
 }
