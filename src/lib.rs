@@ -10,6 +10,7 @@ pub mod embedding;
 pub mod transcription;
 pub mod translation;
 pub mod file;
+pub mod fine_tune;
 
 pub mod util;
 
