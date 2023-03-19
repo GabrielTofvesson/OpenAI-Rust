@@ -1,7 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr, pin::Pin, task::Poll};
 
 use derive_builder::Builder;
-use reqwest::Client;
+use futures::{Stream, StreamExt};
+use reqwest::{Client, RequestBuilder};
+use reqwest_eventsource::{RequestBuilderExt, Event, EventSource};
 use serde::{Serialize, Deserialize};
 
 use crate::{completion::{Sequence, Usage}, context::{API_URL, Context}};
@@ -56,6 +58,7 @@ impl ChatMessage {
 }
 
 #[derive(Debug, Serialize, Builder)]
+#[builder(pattern = "owned")]
 pub struct ChatHistory {
     #[builder(setter(into))]
     pub messages: Vec<ChatMessage>,
@@ -72,7 +75,7 @@ pub struct ChatHistory {
     pub n: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(setter(into, strip_option), default)]
-    pub stream: Option<bool>,
+    stream: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(setter(into, strip_option), default)]
     pub stop: Option<Sequence>,
@@ -93,15 +96,66 @@ pub struct ChatHistory {
     pub user: Option<String>,
 }
 
+#[derive(Debug)]
+pub enum FinishReason {
+    Stop,
+    Length,
+    ContentFilter,
+}
+
+impl<'de> Deserialize<'de> for FinishReason {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de> {
+            // Deserialize the String
+            match String::deserialize(deserializer)? {
+                s if s == "stop" => Ok(Self::Stop),
+                s if s == "length" => Ok(Self::Length),
+                s if s == "content_filter" => Ok(Self::ContentFilter),
+                _ => Err(serde::de::Error::custom("Invalid stop reason")),
+            }
+
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct ChatCompletion {
     pub index: i32,
     pub message: ChatMessage,
-    pub finish_reason: String, // TODO: Create enum for this
+    pub finish_reason: Option<FinishReason>
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ChatCompletionResponse {
+pub struct DeltaMessage {
+    pub role: Option<Role>,
+    pub content: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeltaChatCompletion {
+    pub index: i32,
+    pub delta: DeltaMessage,
+    pub finish_reason: Option<FinishReason>,
+}
+#[derive(Debug, Deserialize)]
+pub struct ChatCompletionDeltaResponse {
+    pub id: String,
+    /* pub object: "chat.completion", */
+    pub created: u64,
+    pub model: String,
+    pub choices: Vec<DeltaChatCompletion>,
+}
+
+impl FromStr for ChatCompletionDeltaResponse {
+    type Err = serde_json::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChatCompletionSyncResponse {
     pub id: String,
     /* pub object: "chat.completion", */
     pub created: u64,
@@ -110,16 +164,58 @@ pub struct ChatCompletionResponse {
     pub usage: Usage
 }
 
+struct CompletionStream {
+    stream: EventSource
+}
+
+impl Stream for CompletionStream {
+    type Item = anyhow::Result<ChatCompletionDeltaResponse>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
+        loop {
+            return match self.stream.poll_next_unpin(cx) {
+                Poll::Ready(Some(Ok(event))) => {
+                    match event {
+                        Event::Message(message) => {
+                            // Stream has ended
+                            if message.data == "[DONE]" {
+                                return Poll::Ready(None)
+                            }
+
+                            match message.data.parse::<ChatCompletionDeltaResponse>() {
+                                Ok(value) => Poll::Ready(Some(Ok(value))),
+                                Err(e) => Poll::Ready(Some(Err(e.into())))
+                            }
+                        },
+                        _ => continue
+                    }
+                },
+                Poll::Ready(Some(Err(e))) => Poll::Ready(Some(Err(anyhow::Error::new(e)))),
+                Poll::Ready(None) => Poll::Ready(None),
+                Poll::Pending => Poll::Pending
+            }
+        }
+    }
+}
+
 impl Context {
-    pub async fn create_chat_completion(&self, chat_completion_request: ChatHistory) -> anyhow::Result<ChatCompletionResponse> {
+    fn build_request(&self, stream: bool, chat_completion_request: ChatHistoryBuilder) -> anyhow::Result<RequestBuilder> {
+        Ok(self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/chat/completions")))
+            .json(&chat_completion_request.stream(stream).build()?))
+    }
+
+    pub async fn create_chat_completion_sync(&self, chat_completion_request: ChatHistoryBuilder) -> anyhow::Result<ChatCompletionSyncResponse> {
         Ok(
-            self.with_auth(Client::builder().build()?.post(&format!("{API_URL}/v1/chat/completions")))
-                .json(&chat_completion_request)
+            self.build_request(false, chat_completion_request)?
                 .send()
                 .await?
                 .error_for_status()?
-                .json::<ChatCompletionResponse>()
+                .json::<ChatCompletionSyncResponse>()
                 .await?
         )
+    }
+
+    pub async fn create_chat_completion_streamed(&self, chat_completion_request: ChatHistoryBuilder) -> anyhow::Result<impl Stream<Item = anyhow::Result<ChatCompletionDeltaResponse>>> {
+        Ok(CompletionStream { stream: self.build_request(true, chat_completion_request)?.eventsource()? })
     }
 }

@@ -17,6 +17,7 @@ pub mod util;
 
 #[cfg(test)]
 mod tests {
+    use futures::StreamExt;
     use tokio::fs::File;
 
     use crate::chat::{ChatHistoryBuilder, ChatMessage, Role};
@@ -65,19 +66,53 @@ mod tests {
 
     #[tokio::test]
     async fn test_chat_completion() {
+        const PROMPT: &str = "Respond to this message with 'this is a test'";
+
         let ctx = get_api();
         assert!(ctx.is_ok(), "Could not load context");
 
-        let completion = ctx.unwrap().create_chat_completion(
+        let ctx = ctx.unwrap();
+
+        println!("Generating completion for prompt: {PROMPT}");
+        let completion = ctx.create_chat_completion_sync(
             ChatHistoryBuilder::default()
-                .messages(vec![ChatMessage::new(Role::User, "Respond to this message with 'this is a test'")])
+                .messages(vec![ChatMessage::new(Role::User, PROMPT)])
                 .model("gpt-3.5-turbo")
-                .build()
-                .unwrap()
         ).await;
 
-        assert!(completion.is_ok(), "Could not get completion: {}", completion.unwrap_err());
-        assert!(completion.unwrap().choices.len() == 1, "No completion found");
+        assert!(completion.is_ok(), "Could not create completion: {}", completion.unwrap_err());
+
+        let result = completion.unwrap();
+        assert!(result.choices.len() == 1, "No completion found");
+        println!("Got completion: {:?}", result.choices[0].message);
+
+        println!("Generating streamed completion for prompt: {PROMPT}");
+        let completion = ctx.create_chat_completion_streamed(
+            ChatHistoryBuilder::default()
+                .messages(vec![ChatMessage::new(Role::User, PROMPT)])
+                .model("gpt-3.5-turbo")
+        ).await;
+
+        assert!(completion.is_ok(), "Could not create completion: {}", completion.err().unwrap());
+        let mut stream = completion.unwrap();
+        while let Some(result) = stream.next().await {
+            assert!(result.is_ok(), "Could not get completion: {}", result.unwrap_err());
+            let result = result.unwrap();
+            assert!(result.choices.len() == 1, "No completion found");
+            
+            let delta = &result.choices[0];
+            if let Some(ref reason) = delta.finish_reason {
+                println!("Got completion end. Reason: {:?}", reason);
+            } else {
+                if let Some(ref role) = delta.delta.role {
+                    println!("Got role: {:?}", role);
+                }
+
+                if let Some(ref message) = delta.delta.content {
+                    println!("Got completion: {:?}", message);
+                }
+            }
+        }
     }
 
     #[tokio::test]
