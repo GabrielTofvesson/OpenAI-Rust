@@ -76,7 +76,7 @@ mod tests {
         println!("Generating completion for prompt: {PROMPT}");
         let completion = ctx.create_chat_completion_sync(
             ChatHistoryBuilder::default()
-                .messages(vec![ChatMessage::new(Role::User, PROMPT)])
+                .messages(vec![ChatMessage::new(Role::User, PROMPT, None)])
                 .model("gpt-3.5-turbo")
         ).await;
 
@@ -89,7 +89,7 @@ mod tests {
         println!("Generating streamed completion for prompt: {PROMPT}");
         let completion = ctx.create_chat_completion_streamed(
             ChatHistoryBuilder::default()
-                .messages(vec![ChatMessage::new(Role::User, PROMPT)])
+                .messages(vec![ChatMessage::new(Role::User, PROMPT, None)])
                 .model("gpt-3.5-turbo")
         ).await;
 

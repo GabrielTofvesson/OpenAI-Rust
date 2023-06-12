@@ -46,13 +46,17 @@ impl<'de> Deserialize<'de> for Role {
 pub struct ChatMessage {
     pub role: Role,
     pub content: String,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 impl ChatMessage {
-    pub fn new(role: Role, message: impl Into<String>) -> Self {
+    pub fn new(role: Role, message: impl Into<String>, name: Option<String>) -> Self {
         Self {
             role,
-            content: message.into()
+            content: message.into(),
+            name
         }
     }
 }
